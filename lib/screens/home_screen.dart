@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../widgets/category_selector.dart';
+import '../providers/compatibility_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -12,27 +14,68 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          const FloatingHeartsAnimation(),
+          // Nonaktifkan animasi hearts sementara untuk performa
+          // const FloatingHeartsAnimation(),
           SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 40),
-                  Text(
-                    'Heartalk',
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: AppColors.primary,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 40),
+                            Text(
+                              'Heartalk',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displayLarge
+                                  ?.copyWith(
+                                    color: AppColors.primary,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Percakapan yang lebih dalam,\nhubungan yang lebih dekat',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(
+                                    color: AppColors.text.withValues(alpha: 0.6),
+                                    height: 1.5,
+                                  ),
+                            ),
+                          ],
                         ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Percakapan yang lebih dalam,\nhubungan yang lebih dekat',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppColors.text.withValues(alpha: 0.6),
-                          height: 1.5,
-                        ),
+                      ),
+                      Consumer<CompatibilityProvider>(
+                        builder: (context, provider, child) {
+                          return IconButton(
+                            onPressed: () =>
+                                context.push('/compatibility/history'),
+                            icon: provider.results.isEmpty
+                                ? const Icon(
+                                    Icons.history,
+                                    size: 32,
+                                    color: AppColors.primary,
+                                  )
+                                : Badge(
+                                    label: Text('${provider.results.length}'),
+                                    child: const Icon(
+                                      Icons.history,
+                                      size: 32,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 60),
                   _buildFeatureCard(
@@ -50,8 +93,17 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.favorite_border,
                     onTap: () => context.push('/compatibility/input'),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 16),
+                  _buildFeatureCard(
+                    context,
+                    title: 'Riwayat Tes',
+                    subtitle: 'Lihat hasil tes kecocokan sebelumnya',
+                    icon: Icons.history,
+                    onTap: () => context.push('/compatibility/history'),
+                  ),
+                  const SizedBox(height: 60),
                   _buildBottomSection(context),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -186,7 +238,7 @@ class HomeScreen extends StatelessWidget {
                     color: AppColors.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.tips_and_updates_outlined,
                     color: AppColors.primary,
                     size: 20,
@@ -240,7 +292,8 @@ class _FloatingHeartsAnimationState extends State<FloatingHeartsAnimation>
       duration: const Duration(seconds: 10),
     )..repeat();
 
-    for (int i = 0; i < 25; i++) {
+    // Kurangi jumlah hearts untuk performa lebih baik
+    for (int i = 0; i < 12; i++) {
       _hearts.add(_generateHeart(true));
     }
   }
@@ -266,11 +319,13 @@ class _FloatingHeartsAnimationState extends State<FloatingHeartsAnimation>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return CustomPaint(
-          painter: _HeartsPainter(_hearts, _random, (index) {
-            _hearts[index] = _generateHeart(false);
-          }),
-          size: Size.infinite,
+        return RepaintBoundary(
+          child: CustomPaint(
+            painter: _HeartsPainter(_hearts, _random, (index) {
+              _hearts[index] = _generateHeart(false);
+            }),
+            size: Size.infinite,
+          ),
         );
       },
     );

@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../data/questions.dart';
+import '../../models/compatibility_result.dart';
+import '../../providers/compatibility_provider.dart';
 
 class QuestionScreen extends StatefulWidget {
   final String userName;
   final String partnerName;
+  final String? existingResultId;
 
   const QuestionScreen({
     super.key,
     required this.userName,
     required this.partnerName,
+    this.existingResultId,
   });
 
   @override
@@ -27,6 +32,28 @@ class _QuestionScreenState extends State<QuestionScreen> {
     CompatibilityQuestions.questions.length,
     null,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingAnswers();
+  }
+
+  void _loadExistingAnswers() {
+    if (widget.existingResultId != null) {
+      final provider = context.read<CompatibilityProvider>();
+      final existingResult = provider.getResultById(widget.existingResultId!);
+      
+      if (existingResult != null) {
+        setState(() {
+          for (int i = 0; i < existingResult.userAnswers.length; i++) {
+            _userAnswers[i] = existingResult.userAnswers[i];
+            _partnerAnswers[i] = existingResult.partnerAnswers[i];
+          }
+        });
+      }
+    }
+  }
 
   void _answerQuestion(bool isUser, bool answer) {
     setState(() {
@@ -50,7 +77,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
           _currentIndex++;
         });
       } else {
-        _calculateResult();
+        _calculateAndSaveResult();
       }
     }
   }
@@ -63,7 +90,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     }
   }
 
-  void _calculateResult() {
+  Future<void> _calculateAndSaveResult() async {
     int matches = 0;
     for (int i = 0; i < _userAnswers.length; i++) {
       if (_userAnswers[i] == _partnerAnswers[i]) {
@@ -71,15 +98,34 @@ class _QuestionScreenState extends State<QuestionScreen> {
       }
     }
     double percentage = (matches / _userAnswers.length) * 100;
+
+    final provider = context.read<CompatibilityProvider>();
     
-    context.push(
-      '/compatibility/result',
-      extra: {
-        'userName': widget.userName,
-        'partnerName': widget.partnerName,
-        'percentage': percentage,
-      },
+    final result = CompatibilityResult(
+      id: widget.existingResultId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      userName: widget.userName,
+      partnerName: widget.partnerName,
+      percentage: percentage,
+      testDate: DateTime.now(),
+      userAnswers: _userAnswers.cast<bool>(),
+      partnerAnswers: _partnerAnswers.cast<bool>(),
     );
+
+    if (widget.existingResultId != null) {
+      await provider.updateResult(widget.existingResultId!, result);
+    } else {
+      await provider.addResult(result);
+    }
+
+    if (mounted) {
+      context.push(
+        '/compatibility/result',
+        extra: {
+          'resultId': result.id,
+          'isNewTest': widget.existingResultId == null,
+        },
+      );
+    }
   }
 
   @override
@@ -94,6 +140,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.text),
           onPressed: () => context.pop(),
         ),
+        title: widget.existingResultId != null
+            ? const Text('Tes Ulang', style: TextStyle(color: AppColors.text))
+            : null,
       ),
       body: Column(
         children: [

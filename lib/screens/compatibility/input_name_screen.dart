@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
+import '../../providers/compatibility_provider.dart';
 
 class InputNameScreen extends StatefulWidget {
-  const InputNameScreen({super.key});
+  final String? existingResultId;
+  
+  const InputNameScreen({
+    super.key,
+    this.existingResultId,
+  });
 
   @override
   State<InputNameScreen> createState() => _InputNameScreenState();
@@ -13,6 +20,23 @@ class _InputNameScreenState extends State<InputNameScreen> {
   final _userNameController = TextEditingController();
   final _partnerNameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingData();
+  }
+
+  void _loadExistingData() {
+    if (widget.existingResultId != null) {
+      final provider = context.read<CompatibilityProvider>();
+      final result = provider.getResultById(widget.existingResultId!);
+      if (result != null) {
+        _userNameController.text = result.userName;
+        _partnerNameController.text = result.partnerName;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -28,6 +52,7 @@ class _InputNameScreenState extends State<InputNameScreen> {
         extra: {
           'userName': _userNameController.text,
           'partnerName': _partnerNameController.text,
+          'existingResultId': widget.existingResultId,
         },
       );
     }
@@ -35,6 +60,8 @@ class _InputNameScreenState extends State<InputNameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isRetake = widget.existingResultId != null;
+    
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -45,9 +72,8 @@ class _InputNameScreenState extends State<InputNameScreen> {
         ),
       ),
       body: SafeArea(
-        // PERBAIKAN 1: Tambahkan SingleChildScrollView agar bisa discroll
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(), // Opsional: efek membal saat scroll
+          physics: const BouncingScrollPhysics(),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Form(
@@ -71,7 +97,7 @@ class _InputNameScreenState extends State<InputNameScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Kenali Lebih Dalam',
+                          isRetake ? 'Tes Ulang Kecocokan' : 'Kenali Lebih Dalam',
                           style: Theme.of(context)
                               .textTheme
                               .displayMedium
@@ -79,7 +105,9 @@ class _InputNameScreenState extends State<InputNameScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Isi nama kalian berdua untuk memulai tes kecocokan',
+                          isRetake 
+                              ? 'Coba tes lagi dan lihat apakah ada perubahan'
+                              : 'Isi nama kalian berdua untuk memulai tes kecocokan',
                           style: Theme.of(context)
                               .textTheme
                               .bodyLarge
@@ -97,6 +125,7 @@ class _InputNameScreenState extends State<InputNameScreen> {
                     hint: 'Masukkan nama kamu',
                     icon: Icons.person_outline,
                     delay: 200,
+                    enabled: !isRetake,
                   ),
                   const SizedBox(height: 24),
                   _buildInputField(
@@ -105,9 +134,9 @@ class _InputNameScreenState extends State<InputNameScreen> {
                     hint: 'Masukkan nama pasangan kamu',
                     icon: Icons.favorite_outline,
                     delay: 400,
+                    enabled: !isRetake,
                   ),
-                  // PERBAIKAN 2: Ganti Spacer() dengan SizedBox agar aman di dalam scroll view
-                  const SizedBox(height: 48), 
+                  const SizedBox(height: 48),
                   TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0.0, end: 1.0),
                     duration: const Duration(milliseconds: 800),
@@ -129,9 +158,9 @@ class _InputNameScreenState extends State<InputNameScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text(
-                          'Mulai Tes',
-                          style: TextStyle(
+                        child: Text(
+                          isRetake ? 'Mulai Tes Ulang' : 'Mulai Tes',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -139,7 +168,6 @@ class _InputNameScreenState extends State<InputNameScreen> {
                       ),
                     ),
                   ),
-                  // Tambahan padding bawah agar tombol tidak mepet keyboard saat discroll mentok
                   const SizedBox(height: 24),
                 ],
               ),
@@ -156,6 +184,7 @@ class _InputNameScreenState extends State<InputNameScreen> {
     required String hint,
     required IconData icon,
     required int delay,
+    bool enabled = true,
   }) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
@@ -181,11 +210,12 @@ class _InputNameScreenState extends State<InputNameScreen> {
           const SizedBox(height: 12),
           TextFormField(
             controller: controller,
+            enabled: enabled,
             decoration: InputDecoration(
               hintText: hint,
               prefixIcon: Icon(icon, color: AppColors.primary),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: enabled ? Colors.white : Colors.grey[100],
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -194,6 +224,12 @@ class _InputNameScreenState extends State<InputNameScreen> {
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
                   color: AppColors.primary.withValues(alpha: 0.1),
+                ),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: Colors.grey.withValues(alpha: 0.2),
                 ),
               ),
               focusedBorder: OutlineInputBorder(

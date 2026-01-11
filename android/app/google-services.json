@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "467791308468",
+    "project_id": "heartalk-e9f21",
+    "storage_bucket": "heartalk-e9f21.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:467791308468:android:05134fcba702573ac319e1",
+        "android_client_info": {
+          "package_name": "com.example.heartalk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCaXU-KMub0Zc8mihqoerIpqOvKqbznOE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
